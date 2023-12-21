@@ -1,61 +1,92 @@
 // Appointments.js
 
 import React from 'react';
-import { View, Text,  Button} from 'react-native';
+import { View, Text,  Button, Platform} from 'react-native';
 import { app, auth, firestore  } from './firebase';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, getDocs, query, where} from 'firebase/firestore';
 import { IDictionary } from './phonelogin';
+import  DateTimePicker from '@react-native-community/datetimepicker';
+
 
 export default function Appointments() {
   
   const [userdetails, setUserDetails] = useState([]);
   
-  const [currentDate, setCurrentDate] = useState('');
+  // const [currentDate, setCurrentDate] = useState('');
 
-  useEffect(() => {
-    var date = new Date().getDate(); //Current Date
-    var month = new Date().getMonth() + 1; //Current Month
-    var year = new Date().getFullYear(); //Current Year
-    var hours = new Date().getHours(); //Current Hours
-    var min = new Date().getMinutes(); //Current Minutes
-    var sec = new Date().getSeconds(); //Current Seconds
-    setCurrentDate(
-      date + '/' + month + '/' + year 
-      + ' ' + hours + ':' + min + ':' + sec
-    );
-  }, []);
+  const [date, setDate] = useState(new Date());
+  const [mode, setMode] = useState('date');
+  const [show, setShow] = useState(false);
+  const [text, setText] = useState('Empty');
 
+  const onChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
 
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const userCollectionRef = collection(firestore, 'User');
-        const q = query(userCollectionRef, where('userID', '==', IDictionary['authID']));
-        const querySnapshot = await getDocs(q);
-
-        querySnapshot.forEach((doc) => {
-          // Access data inside each document using doc.data()
-          const data = doc.data();
-          setUserDetails(data)
-          console.log('Document data:', userdetails);
-        });
-      } catch (error) {
-        console.error('Error fetching data:', error);
+    if (event.type === 'set') {
+      if (mode === 'date') {
+        // If the current mode is 'date', update date state and switch to 'time' mode
+        setDate(currentDate);
+        showMode('time');
+      } else if (mode === 'time') {
+        // If the current mode is 'time', update time-related states and set the text
+        let tempDate = new Date(currentDate);
+        let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
+        let fTime = 'Hours: ' + tempDate.getHours() + ' | Minutes: ' + tempDate.getMinutes();
+        setText(fDate + '\n' + fTime);
+        setShow(false); // Hide the DateTimePicker
       }
-    };
+    } else if (event.type === 'dismissed') {
+      // Handle case when the DateTimePicker is dismissed
+      setShow(false);
+    }
+  };
 
-    fetchData(); // Call the function to fetch data when the component mounts
-  }, []);
+  const showMode = (currentMode) => {
+    setShow(true);
+    setMode(currentMode);
+  }
 
-  
-  const handlePress = () => false
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      {/* <Text>Welcome to the Home Page!</Text> */}
-      <Text>hello {userdetails.FirstName} good to see you agian</Text>
-      <Text>the date is: {currentDate}</Text>
+      <Text style={{ fontWeight: 'bold', fontSize: 20 }}>{text}</Text>
+      <View style={{ margin: 20 }}>
+        <Button title='DatePicker' onPress={() => showMode('date')} />
+      </View>
+      {show && (
+        <DateTimePicker
+          testID="dateTimePicker"
+          value={date}
+          mode={mode}
+          is24Hour={true}
+          display='default'
+          onChange={onChange}
+        />
+      )}
     </View>
   );
 }
+
+
+
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const userCollectionRef = collection(firestore, 'User');
+  //       const q = query(userCollectionRef, where('userID', '==', IDictionary['authID']));
+  //       const querySnapshot = await getDocs(q);
+
+  //       querySnapshot.forEach((doc) => {
+  //         // Access data inside each document using doc.data()
+  //         const data = doc.data();
+  //         setUserDetails(data)
+  //         console.log('Document data:', userdetails);
+  //       });
+  //     } catch (error) {
+  //       console.error('Error fetching data:', error);
+  //     }
+  //   };
+
+  //   fetchData(); // Call the function to fetch data when the component mounts
+  // }, []);
+
