@@ -7,6 +7,20 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, getDocs, query, where} from 'firebase/firestore';
 import { IDictionary } from './phonelogin';
 import  DateTimePicker from '@react-native-community/datetimepicker';
+import DatePicker from 'react-native-date-picker';
+
+const times = [
+  {id:1,time: '09:00',isAvilable:true},
+  {id:2,time: '10:00',isAvilable:false},
+  {id:3,time: '11:00',isAvilable:true},
+  {id:4,time: '12:00',isAvilable:true},
+  {id:5,time: '13:00',isAvilable:true},
+ 
+];
+const filteredTimes = times.filter((time)=>time.isAvilable)
+const filteredTimes2 = []
+
+
 
 
 export default function Appointments() {
@@ -14,7 +28,7 @@ export default function Appointments() {
   const [userdetails, setUserDetails] = useState([]);
   
   // const [currentDate, setCurrentDate] = useState('');
-
+  const [scheduled, setScheduled] = useState(false);
   const [date, setDate] = useState(new Date());
   const [mode, setMode] = useState('date');
   const [show, setShow] = useState(false);
@@ -25,19 +39,17 @@ export default function Appointments() {
 
     if (event.type === 'set') {
       if (mode === 'date') {
-        // If the current mode is 'date', update date state and switch to 'time' mode
         setDate(currentDate);
+        setScheduled(true);
         showMode('time');
       } else if (mode === 'time') {
-        // If the current mode is 'time', update time-related states and set the text
         let tempDate = new Date(currentDate);
         let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
         let fTime = 'Hours: ' + tempDate.getHours() + ' | Minutes: ' + tempDate.getMinutes();
         setText(fDate + '\n' + fTime);
-        setShow(false); // Hide the DateTimePicker
+        setShow(false);
       }
     } else if (event.type === 'dismissed') {
-      // Handle case when the DateTimePicker is dismissed
       setShow(false);
     }
   };
@@ -63,6 +75,13 @@ export default function Appointments() {
           onChange={onChange}
         />
       )}
+      {/* {date&&<></>} */}
+      {scheduled && filteredTimes.map((time)=>{return <View key={time.id}>
+        <Button 
+          title={time.time} 
+          onPress={() => handleTimeClick(time)} 
+        />
+      </View>})}
     </View>
   );
 }
