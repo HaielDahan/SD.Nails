@@ -1,7 +1,7 @@
 // Appointments.js
 
 import React from 'react';
-import { View, Text,  Button, Platform} from 'react-native';
+import { View, Text,  Button, Platform, Alert, Modal, StyleSheet, Pressable} from 'react-native';
 import { app, auth, firestore  } from './firebase';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, getDocs, query, where} from 'firebase/firestore';
@@ -32,7 +32,11 @@ export default function Appointments() {
   const [date, setDate] = useState(new Date());
   const [mode, setMode] = useState('date');
   const [show, setShow] = useState(false);
-  const [text, setText] = useState('Empty');
+  const [datetext, setDatetext] = useState('Empty');
+  const [timetext, setTimetext] = useState({});
+
+
+  const [modalVisible, setModalVisible] = useState(false);
 
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -41,13 +45,17 @@ export default function Appointments() {
       if (mode === 'date') {
         setDate(currentDate);
         setScheduled(true);
-        showMode('time');
-      } else if (mode === 'time') {
+        setModalVisible(true);
         let tempDate = new Date(currentDate);
         let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
-        let fTime = 'Hours: ' + tempDate.getHours() + ' | Minutes: ' + tempDate.getMinutes();
-        setText(fDate + '\n' + fTime);
-        setShow(false);
+        setDatetext(fDate);
+        // showMode('time');
+      // } else if (mode === 'time') {
+      //   let tempDate = new Date(currentDate);
+      //   let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
+      //   let fTime = 'Hours: ' + tempDate.getHours() + ' | Minutes: ' + tempDate.getMinutes();
+      //   setText(fDate + '\n' + fTime);
+      //   setShow(false);
       }
     } else if (event.type === 'dismissed') {
       setShow(false);
@@ -58,10 +66,27 @@ export default function Appointments() {
     setShow(true);
     setMode(currentMode);
   }
+  const handleTimeClick = (time) => {
+    setTimetext(time);
+    console.log("time: ", time.time);
+  }
 
+  const handleDateTime = (date ,time) => {
+    console.log("date:", date);
+    console.log("time: ", time.time);
+    setModalVisible(!modalVisible);
+    setShow(false);
+  }
+
+  const handleHideModel = () => {
+    setTimetext({});
+    console.log("date:", date);
+    console.log("time: ", timetext);
+    setModalVisible(!modalVisible);
+  }
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontWeight: 'bold', fontSize: 20 }}>{text}</Text>
+      <Text style={{ fontWeight: 'bold', fontSize: 20 }}>{datetext}, {timetext.time}</Text>
       <View style={{ margin: 20 }}>
         <Button title='DatePicker' onPress={() => showMode('date')} />
       </View>
@@ -76,16 +101,97 @@ export default function Appointments() {
         />
       )}
       {/* {date&&<></>} */}
-      {scheduled && filteredTimes.map((time)=>{return <View key={time.id}>
+      {/* {scheduled && filteredTimes.map((time)=>{return <View key={time.id}>
         <Button 
           title={time.time} 
           onPress={() => handleTimeClick(time)} 
         />
-      </View>})}
+      </View>})} */}
+      <View style={styles.centeredView}>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          Alert.alert('Modal has been closed.');
+          setModalVisible(!modalVisible);
+        }}>
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>choose a time:</Text>
+            <Pressable>
+            {scheduled && filteredTimes.map((time)=>{return <View key={time.id}>
+             <Button 
+            title={time.time} 
+            onPress={() => handleTimeClick(time)} />
+            </View>})}
+            </Pressable>
+            <Pressable
+              style={[styles.button, styles.buttonClose]}
+              onPress={() => handleHideModel()}>
+              <Text style={styles.textStyle}>Hide Modal</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.button, styles.buttonClose]}
+              onPress={() => handleDateTime(datetext, timetext)}>
+              <Text style={styles.textStyle}>ok</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+      {/* <Pressable
+        style={[styles.button, styles.buttonOpen]}
+        onPress={() => setModalVisible(true)}>
+        <Text style={styles.textStyle}>Show Modal</Text>
+      </Pressable> */}
+    </View>
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  button: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  buttonOpen: {
+    backgroundColor: '#F194FF',
+  },
+  buttonClose: {
+    backgroundColor: '#2196F3',
+  },
+  textStyle: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+});
 
 
   // useEffect(() => {
