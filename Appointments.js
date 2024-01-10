@@ -4,7 +4,7 @@ import React from 'react';
 import { View, Text,  Button, Platform, Alert, Modal, StyleSheet, Pressable} from 'react-native';
 import { app, auth, firestore  } from './firebase';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, getDocs, query, where} from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, query, where, setDoc, doc} from 'firebase/firestore';
 import { IDictionary } from './phonelogin';
 import  DateTimePicker from '@react-native-community/datetimepicker';
 import DatePicker from 'react-native-date-picker';
@@ -34,9 +34,37 @@ export default function Appointments() {
   const [show, setShow] = useState(false);
   const [datetext, setDatetext] = useState('Empty');
   const [timetext, setTimetext] = useState({});
+  const [appdata, setAppdata] = useState({ 
+    date: '',
+    hour:'',
+    notes: '', 
+    userID: IDictionary['authID'],
+    });
 
 
   const [modalVisible, setModalVisible] = useState(false);
+
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const appointmentCollectionRef = collection(firestore, 'Appointment');    
+  //       const q = query(appointmentCollectionRef, where('', '==',);
+  //       const querySnapshot = await getDocs(q);
+
+  //       querySnapshot.forEach((doc) => {
+  //         // Access data inside each document using doc.data()
+  //         const data = doc.data();
+  //         setAppdata(data)
+  //         console.log('Document data:', appdata);
+  //       });
+  //     } catch (error) {
+  //       console.error('Error fetching data:', error);
+  //     }
+  //   };
+
+  //   fetchData(); // Call the function to fetch data when the component mounts
+  // }, []);
+
 
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -49,6 +77,7 @@ export default function Appointments() {
         let tempDate = new Date(currentDate);
         let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
         setDatetext(fDate);
+        setAppdata({...appdata,date:fDate});
         // showMode('time');
       // } else if (mode === 'time') {
       //   let tempDate = new Date(currentDate);
@@ -68,15 +97,29 @@ export default function Appointments() {
   }
   const handleTimeClick = (time) => {
     setTimetext(time);
-    console.log("time: ", time.time);
+    setAppdata({...appdata,hour:time.time})
   }
 
-  const handleDateTime = (date ,time) => {
-    console.log("date:", date);
-    console.log("time: ", time.time);
+  const handleDateTime = async () => {
+    const collectionRef = collection(firestore, 'Appointment');
+    // const dataToSave = {
+    //   date: datetext,
+    //   // other properties from appdata that you want to save
+    // };
+    const datetextWithoutSlashes = datetext.replace(/\//g, '-');
+    const newDocRef = doc(collectionRef, datetextWithoutSlashes);
+    let dateid = datetext;
+    try {
+      await setDoc(newDocRef, appdata);
+      console.log('Document successfully written!');
+    } catch (error) {
+      console.error('Error writing document: ', error);
+    }
+  
     setModalVisible(!modalVisible);
     setShow(false);
   }
+  
 
   const handleHideModel = () => {
     setTimetext({});
@@ -133,7 +176,7 @@ export default function Appointments() {
             </Pressable>
             <Pressable
               style={[styles.button, styles.buttonClose]}
-              onPress={() => handleDateTime(datetext, timetext)}>
+              onPress={() => handleDateTime()}>
               <Text style={styles.textStyle}>ok</Text>
             </Pressable>
           </View>
@@ -194,24 +237,5 @@ const styles = StyleSheet.create({
 });
 
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const userCollectionRef = collection(firestore, 'User');
-  //       const q = query(userCollectionRef, where('userID', '==', IDictionary['authID']));
-  //       const querySnapshot = await getDocs(q);
 
-  //       querySnapshot.forEach((doc) => {
-  //         // Access data inside each document using doc.data()
-  //         const data = doc.data();
-  //         setUserDetails(data)
-  //         console.log('Document data:', userdetails);
-  //       });
-  //     } catch (error) {
-  //       console.error('Error fetching data:', error);
-  //     }
-  //   };
-
-  //   fetchData(); // Call the function to fetch data when the component mounts
-  // }, []);
 
