@@ -11,12 +11,13 @@ import DatePicker from 'react-native-date-picker';
 
 const times = [
   {id:1,time: '09:00',isAvilable:true},
-  {id:2,time: '10:00',isAvilable:false},
+  {id:2,time: '10:00',isAvilable:true},
   {id:3,time: '11:00',isAvilable:true},
   {id:4,time: '12:00',isAvilable:true},
   {id:5,time: '13:00',isAvilable:true},
  
 ];
+
 const filteredTimes = times.filter((time)=>time.isAvilable)
 const filteredTimes2 = []
 
@@ -34,6 +35,8 @@ export default function Appointments() {
   const [show, setShow] = useState(false);
   const [datetext, setDatetext] = useState('Empty');
   const [timetext, setTimetext] = useState({});
+  const [avilabletime, setAvilabletime] = useState([]);
+  const [unavailable, setUnavailable] = useState(false);
   const [appdata, setAppdata] = useState({ 
     date: '',
     hour:'',
@@ -66,30 +69,57 @@ export default function Appointments() {
   // }, []);
 
 
-  const onChange = (event, selectedDate) => {
+  const onChange = async (event, selectedDate) => {
     const currentDate = selectedDate || date;
 
     if (event.type === 'set') {
-      if (mode === 'date') {
-        setDate(currentDate);
-        setScheduled(true);
-        setModalVisible(true);
-        let tempDate = new Date(currentDate);
-        let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
-        setDatetext(fDate);
-        setAppdata({...appdata,date:fDate});
-        // showMode('time');
-      // } else if (mode === 'time') {
-      //   let tempDate = new Date(currentDate);
-      //   let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
-      //   let fTime = 'Hours: ' + tempDate.getHours() + ' | Minutes: ' + tempDate.getMinutes();
-      //   setText(fDate + '\n' + fTime);
-      //   setShow(false);
-      }
+      // console.log("i am here:");
+      setDate(currentDate);
+      setModalVisible(true);
+      let tempDate = new Date(currentDate);
+      let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
+      setDatetext(fDate);
+      setAppdata({...appdata,date:fDate});
+      const filteredResult = await filteredavailabletime(fDate);
+      setScheduled(true);
     } else if (event.type === 'dismissed') {
       setShow(false);
     }
   };
+
+  const filteredavailabletime = async (date) => {
+    console.log("i am here:",date);
+    const datetextWithoutSlashes = date.replace(/\//g, '-');
+    const collectionRef = collection(firestore, 'Appointment');
+    const timecol = await getDocs(collectionRef);
+    // const filteredDocs = timecol.docs.filter(doc => doc.id === datetextWithoutSlashes);
+    const filteredDocs = timecol.docs.filter(doc => {
+      const idParts = doc.id.split(':');
+      const datePart = idParts[0];
+      return datePart === datetextWithoutSlashes;
+    });    
+    if (filteredDocs.length !== 0) {
+      const updatedTimes = times.map(time => {
+        const matchingDoc = filteredDocs.find(doc => doc.data().hour === time.time);
+        if (matchingDoc) {
+          return { ...time, isAvilable: false };
+        }
+        return time;
+      });
+
+      if (updatedTimes.every(time => !time.isAvilable)) {
+        setUnavailable(true);
+      }else{
+        setUnavailable(false);
+      }
+      setAvilabletime(updatedTimes);
+    } else {
+      setAvilabletime(times);
+    }
+  
+    // Return the result if needed
+    return timecol;
+  }
 
   const showMode = (currentMode) => {
     setShow(true);
@@ -107,7 +137,7 @@ export default function Appointments() {
     //   // other properties from appdata that you want to save
     // };
     const datetextWithoutSlashes = datetext.replace(/\//g, '-');
-    const newDocRef = doc(collectionRef, datetextWithoutSlashes);
+    const newDocRef = doc(collectionRef, datetextWithoutSlashes+ ":" +timetext.time);
     let dateid = datetext;
     try {
       await setDoc(newDocRef, appdata);
@@ -123,8 +153,8 @@ export default function Appointments() {
 
   const handleHideModel = () => {
     setTimetext({});
-    console.log("date:", date);
-    console.log("time: ", timetext);
+    // console.log("date:", date);
+    // console.log("time: ", timetext);
     setModalVisible(!modalVisible);
   }
   return (
@@ -163,16 +193,24 @@ export default function Appointments() {
           <View style={styles.modalView}>
             <Text style={styles.modalText}>choose a time:</Text>
             <Pressable>
-            {scheduled && filteredTimes.map((time)=>{return <View key={time.id}>
-             <Button 
-            title={time.time} 
-            onPress={() => handleTimeClick(time)} />
-            </View>})}
+            {scheduled && !unavailable && avilabletime.map((time)=>{
+              if (time.isAvilable) {
+              return <View key={time.id}>
+                        <Button 
+                        title={time.time} 
+                        onPress={() => handleTimeClick(time)} />
+                      </View>
+              }})}
+              {scheduled && unavailable && (
+                <View>
+                  <Text>Unavailability of appointments</Text>
+                </View>
+              )}
             </Pressable>
             <Pressable
               style={[styles.button, styles.buttonClose]}
               onPress={() => handleHideModel()}>
-              <Text style={styles.textStyle}>Hide Modal</Text>
+              <Text style={styles.textStyle}>cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.button, styles.buttonClose]}
@@ -237,5 +275,30 @@ const styles = StyleSheet.create({
 });
 
 
+        // showMode('time');
+      // } else if (mode === 'time') {
+      //   let tempDate = new Date(currentDate);
+      //   let fDate = tempDate.getDate() + '/' + (tempDate.getMonth() + 1) + '/' + tempDate.getFullYear();
+      //   let fTime = 'Hours: ' + tempDate.getHours() + ' | Minutes: ' + tempDate.getMinutes();
+      //   setText(fDate + '\n' + fTime);
+      //   setShow(false);
 
 
+      // if(filteredDocs.length != 0){    
+      //   filteredDocs.forEach(doc => {
+      //     console.log(doc.id, " => ", doc.data());
+      //     const timeToUpdate = doc.data().hour;
+      //     const updatedTimes = times.map(time => {
+      //       if (time.time === timeToUpdate) {
+      //         return { ...time, isAvilable: false };
+      //       }
+      //       return time;
+      //     });
+      //     console.log(updatedTimes);
+      //     setAvilabletime(updatedTimes);
+      //   });
+      // }
+      // else{
+      //   setAvilabletime(times)
+      //   return times;
+      // }
